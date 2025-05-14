@@ -19,7 +19,9 @@ pico_sdk_init()
 add_executable(ST7305_Display
     examples/main.cpp
     src/st7305_driver.cpp
-    src/st7305_font.cpp
+    src/fonts/st7305_font.cpp
+    src/st73xx_ui.cpp
+    src/pico_display_gfx.cpp
 )
 
 # Add include directories
@@ -32,6 +34,7 @@ target_link_libraries(ST7305_Display PUBLIC # 或者 PRIVATE 如果这些库仅�
     pico_stdlib
     hardware_spi
     hardware_gpio                 # 添加 GPIO 库
+    pico_stdio_usb
 )
 
 # Enable usb output, disable uart output

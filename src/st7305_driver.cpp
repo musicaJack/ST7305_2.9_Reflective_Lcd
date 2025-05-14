@@ -3,6 +3,8 @@
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
 #include "pico/stdlib.h"
+#include "st7305_font.hpp"
+#include "gfx_colors.hpp"
 
 namespace st7305 {
 
@@ -245,23 +247,35 @@ void ST7305Driver::fill(uint8_t data) {
 }
 
 void ST7305Driver::writePoint(uint16_t x, uint16_t y, bool enabled) {
-    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) {
-        return;
+    uint16_t tx = x, ty = y;
+    switch (rotation_) {
+        case 1:
+            tx = y;
+            ty = LCD_WIDTH - x - 1;
+            break;
+        case 2:
+            tx = LCD_WIDTH - x - 1;
+            ty = LCD_HEIGHT - y - 1;
+            break;
+        case 3:
+            tx = LCD_HEIGHT - y - 1;
+            ty = x;
+            break;
+        default:
+            break;
     }
-
+    if (tx >= LCD_WIDTH || ty >= LCD_HEIGHT) return;
     // 找到是哪一行的数据
-    uint16_t real_x = x/4; // 0->0, 3->0, 4->1, 7->1
-    uint16_t real_y = y/2; // 0->0, 1->0, 2->1, 3->1
+    uint16_t real_x = tx/4;
+    uint16_t real_y = ty/2;
     uint16_t write_byte_index = real_y*LCD_DATA_WIDTH+real_x;
-    uint8_t one_two = (y % 2 == 0)?0:1; // 0 1
-    uint8_t line_bit_4 = x % 4; // 0 1 2 3
+    uint8_t one_two = (ty % 2 == 0)?0:1;
+    uint8_t line_bit_4 = tx % 4;
     uint8_t write_bit = 7-(line_bit_4*2+one_two);
 
     if (enabled) {
-        // 将指定位置的 bit 置为 1
         display_buffer_[write_byte_index] |= (1 << write_bit);
     } else {
-        // 将指定位置的 bit 置为 0
         display_buffer_[write_byte_index] &= ~(1 << write_bit);
     }
 }
@@ -288,23 +302,26 @@ void ST7305Driver::display() {
 }
 
 void ST7305Driver::drawPixel(uint16_t x, uint16_t y, bool color) {
-    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
-
-    // 找到是哪一行的数据
-    uint16_t real_x = x/4;  // 0->0, 3->0, 4->1, 7->1
-    uint16_t real_y = y/2;  // 0->0, 1->0, 2->1, 3->1
-    uint32_t write_byte_index = real_y*LCD_DATA_WIDTH+real_x;
-    uint8_t one_two = (y % 2 == 0)?0:1;  // 0 1
-    uint8_t line_bit_4 = x % 4;  // 0 1 2 3
-    uint8_t write_bit = 7-(line_bit_4*2+one_two);
-
-    if (color) {
-        // 将指定位置的 bit 置为 1
-        display_buffer_[write_byte_index] |= (1 << write_bit);
-    } else {
-        // 将指定位置的 bit 置为 0
-        display_buffer_[write_byte_index] &= ~(1 << write_bit);
+    uint16_t tx = x, ty = y;
+    switch (rotation_) {
+        case 1: // 90 deg
+            tx = LCD_WIDTH - 1 - y;
+            ty = x;
+            break;
+        case 2: // 180 deg
+            tx = LCD_WIDTH - 1 - x;
+            ty = LCD_HEIGHT - 1 - y;
+            break;
+        case 3: // 270 deg
+            tx = y;
+            ty = LCD_HEIGHT - 1 - x;
+            break;
+        default: // 0 deg
+            // tx = x; ty = y; // No change
+            break;
     }
+    // 调用新的 plotPixelRaw 方法
+    plotPixelRaw(tx, ty, color);
 }
 
 void ST7305Driver::displayOn(bool on) {
@@ -344,43 +361,122 @@ void ST7305Driver::highPowerMode() {
 }
 
 void ST7305Driver::drawChar(uint16_t x, uint16_t y, char c, bool color) {
-    if (c < current_font_.first_char || c > current_font_.last_char) {
+    if (c < 32 || c > 126) {
         return;
     }
-
-    const uint8_t* char_data = current_font_.data + (c - current_font_.first_char) * current_font_.bytes_per_char;
-    
-    for (uint8_t i = 0; i < current_font_.width; i++) {
-        for (uint8_t j = 0; j < current_font_.height; j++) {
-            uint8_t byte = char_data[i];
-            bool pixel = (byte & (1 << j)) != 0;
-            if (color) {
-                pixel = !pixel;
-            }
-            drawPixel(x + i, y + j, pixel);
+    const uint8_t* char_data = font + (c - 32) * ST7305_FONT_WIDTH;
+    for (uint8_t col = 0; col < ST7305_FONT_WIDTH; col++) {
+        uint8_t byte = char_data[col];
+        for (uint8_t row = 0; row < ST7305_FONT_HEIGHT; row++) {
+            bool pixel_is_set_in_font = (byte >> row) & 0x01;
+            drawPixel(x + col, y + row, (color == BLACK && pixel_is_set_in_font) ? BLACK : WHITE);
         }
     }
 }
 
 void ST7305Driver::drawString(uint16_t x, uint16_t y, std::string_view str, bool color) {
-    uint16_t current_x = x;
     for (char c : str) {
-        if (c < current_font_.first_char || c > current_font_.last_char) {
+        if (c < 32 || c > 126) {
             continue;
         }
-        drawChar(current_x, y, c, color);
-        current_x += current_font_.width;
+        switch (rotation_) {
+            case 0: // 正常横排
+                drawChar(x, y, c, color);
+                x += ST7305_FONT_WIDTH;
+                break;
+            case 1: // 90度，竖排，字头朝上
+                drawChar(x, y, c, color);
+                y += ST7305_FONT_WIDTH;
+                break;
+            case 2: // 180度，横排反向
+                drawChar(x, y, c, color);
+                x -= ST7305_FONT_WIDTH;
+                break;
+            case 3: // 270度，竖排反向
+                drawChar(x, y, c, color);
+                y -= ST7305_FONT_WIDTH;
+                break;
+            default:
+                drawChar(x, y, c, color);
+                x += ST7305_FONT_WIDTH;
+                break;
+        }
     }
 }
 
 uint16_t ST7305Driver::getStringWidth(std::string_view str) const {
     uint16_t width = 0;
     for (char c : str) {
-        if (c >= current_font_.first_char && c <= current_font_.last_char) {
-            width += current_font_.width;
+        if (c >= 32 && c <= 126) {
+            width += ST7305_FONT_WIDTH;
         }
     }
     return width;
+}
+
+// 新增：清屏
+void ST7305Driver::clearDisplay() {
+    clear();
+}
+
+// 新增：设置旋转
+void ST7305Driver::setRotation(int r) {
+    rotation_ = r % 4;
+}
+
+// 新增：获取旋转
+int ST7305Driver::getRotation() const {
+    return rotation_;
+}
+
+// 新增：显示开关
+void ST7305Driver::display_on(bool enabled) {
+    displayOn(enabled);
+}
+
+// 新增：休眠
+void ST7305Driver::display_sleep(bool enabled) {
+    displaySleep(enabled);
+}
+
+// 新增：反显
+void ST7305Driver::display_Inversion(bool enabled) {
+    displayInversion(enabled);
+}
+
+// 新增：低功耗
+void ST7305Driver::Low_Power_Mode() {
+    lowPowerMode();
+}
+
+// 新增：高功耗
+void ST7305Driver::High_Power_Mode() {
+    highPowerMode();
+}
+
+// 新增：plotPixelRaw 方法实现
+void ST7305Driver::plotPixelRaw(uint16_t x, uint16_t y, bool color) {
+    // (x,y) 已经是物理坐标，直接写入缓冲区
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT) return;
+
+    uint16_t real_x = x/4;
+    uint16_t real_y = y/2;
+    uint32_t write_byte_index = real_y*LCD_DATA_WIDTH+real_x;
+    uint8_t one_two = (y % 2 == 0)?0:1;
+    uint8_t line_bit_4 = x % 4;
+
+    uint8_t write_bit = 7-(line_bit_4*2+one_two);
+
+    if (color) {
+        display_buffer_[write_byte_index] |= (1 << write_bit);
+    }
+    else {
+        display_buffer_[write_byte_index] &= ~(1 << write_bit);
+    }
+}
+
+uint8_t ST7305Driver::getCurrentFontWidth() const {
+    return ST7305_FONT_WIDTH;
 }
 
 } // namespace st7305 

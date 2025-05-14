@@ -7,20 +7,6 @@
 
 namespace st7305 {
 
-// 字体结构体定义
-struct Font {
-    const uint8_t* data;
-    uint8_t first_char;
-    uint8_t last_char;
-    uint8_t width;
-    uint8_t height;
-    uint8_t bytes_per_char;
-};
-
-// 预定义字体
-extern const Font font_6x8;
-extern const Font font_8x16;
-
 class ST7305Driver {
 public:
     // 颜色定义
@@ -48,7 +34,6 @@ public:
     void fill(uint8_t data);
 
     // 文本显示函数
-    void setFont(const Font& font) { current_font_ = font; }
     void drawChar(uint16_t x, uint16_t y, char c, bool color);
     void drawString(uint16_t x, uint16_t y, std::string_view str, bool color);
     uint16_t getStringWidth(std::string_view str) const;
@@ -59,6 +44,20 @@ public:
     void displayInversion(bool enabled);
     void lowPowerMode();
     void highPowerMode();
+
+    // 新增接口
+    void clearDisplay();
+    void setRotation(int r);
+    int getRotation() const;
+    void display_on(bool enabled);
+    void display_sleep(bool enabled);
+    void display_Inversion(bool enabled);
+    void Low_Power_Mode();
+    void High_Power_Mode();
+
+    void plotPixelRaw(uint16_t x, uint16_t y, bool color);
+
+    uint8_t getCurrentFontWidth() const;
 
 private:
     void writeCommand(uint8_t cmd);
@@ -76,7 +75,7 @@ private:
     bool hpm_mode_ = false;
     bool lpm_mode_ = false;
 
-    Font current_font_ = font_6x8;  // 默认使用6x8字体
+    int rotation_ = 0; // 0:默认，1:90度，2:180度，3:270度
 
     // 私有辅助函数
     void setAddress();
