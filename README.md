@@ -99,7 +99,7 @@ cd ST7305_2.9_Reflective_Lcd
 #include "st7305_driver.hpp"
 
 // Create display object
-st7305::ST7305Driver display(DC_PIN, RES_PIN, CS_PIN, SCK_PIN, SDIN_PIN);
+st7305::ST7305Driver display(DC_PIN, RST_PIN, CS_PIN, SCLK_PIN, SDIN_PIN);
 
 // Initialize display
 display.initialize();
@@ -130,14 +130,24 @@ display.displayInversion(false);
 ### Graphics Drawing
 
 ```cpp
+// Clear display
+display.clearDisplay();
+display.display();
+
 // Draw pixel
-display.drawPixel(x, y, true);
+display.drawPixel(x, y, 1);
 
-// Draw character
-display.drawChar(x, y, 'A', true);
+// Draw line, rectangle, circle, triangle, etc.
+display.drawLine(10, 10, 100, 10, 1);
+display.drawRectangle(20, 20, 50, 30, 1);
+display.drawCircle(60, 60, 15, 1);
+display.drawFilledRectangle(30, 30, 40, 20, 0);
 
-// Draw string
-display.drawString(x, y, "Hello World!", true);
+// Draw text (driver layer)
+display.drawString(10, 10, "Hello LCD!", 1);
+
+// Refresh display
+display.display();
 ```
 
 ### Power Management

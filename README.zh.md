@@ -30,15 +30,23 @@
 ### 目录结构
 
 ```
-├── src/                    # 源代码目录
-│   ├── st7305_driver.cpp  # 核心驱动实现
-│   └── st7305_font.cpp    # 字体支持
-├── include/               # 头文件目录
-│   ├── st7305_driver.hpp # 核心驱动头文件
-│   └── st7305_config.hpp # 配置文件
-├── examples/              # 示例代码
-├── build/                 # 构建输出目录
-└── CMakeLists.txt        # CMake构建配置
+├── src/
+│   ├── st7305_driver.cpp      # Core driver implementation
+│   ├── st73xx_ui.cpp          # UI abstraction layer (GFX-like)
+│   ├── pico_display_gfx.cpp   # GFX UI implementation
+│   └── fonts/
+│       └── st7305_font.cpp    # Built-in font data
+├── include/
+│   ├── st7305_driver.hpp      # Core driver header
+│   ├── st73xx_ui.hpp          # UI abstraction header
+│   ├── pico_display_gfx.hpp   # GFX UI header
+│   ├── st7305_font.hpp        # Font header
+│   └── gfx_colors.hpp         # Color definitions
+├── examples/
+│   └── main.cpp               # Example usage
+├── build/                     # Build output
+├── CMakeLists.txt             # CMake build configuration
+└── build_pico.bat             # Windows build script
 ```
 
 ## 快速开始
