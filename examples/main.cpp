@@ -27,9 +27,7 @@ const char* lines[] = {
     "Through silicon veins, electrons race,",
     "crafting dreams in this small space.",
     "The universe fits in RAM's embrace,",
-    "as Pico charts its stellar chase.",
-    "From Earth to where the comets roam,",
-    "it codes a path to bring them home."
+    "as Pico charts its stellar chase."
 };
 
 const int NUM_LINES = sizeof(lines) / sizeof(lines[0]);
@@ -66,7 +64,7 @@ int main() {
     RF_lcd.clearDisplay();
     
     // 计算每行最多能显示多少字符
-    int max_chars_per_line = gfx.width() / font::FONT_WIDTH;
+    int max_chars_per_line = (gfx.width() - 10) / font::FONT_WIDTH; // 减去左右各5像素的边距
     std::vector<std::string> wrapped_lines;
     for (int i = 0; i < NUM_LINES; i++) {
         std::vector<std::string> temp = wrapText(lines[i], max_chars_per_line);
@@ -74,13 +72,20 @@ int main() {
     }
     int total_lines = wrapped_lines.size();
     int line_height = font::FONT_HEIGHT + 2;
-    int start_y = (gfx.height() - (total_lines * line_height)) / 2;
     
-    // 居中显示每一行
+    // 计算总显示高度
+    int total_display_height = total_lines * line_height;
+    // 计算起始Y坐标，确保有足够的空间显示所有文字
+    int start_y = 5; // 从顶部5像素开始
+    
+    // 左对齐显示每一行
     for (int i = 0; i < total_lines; i++) {
-        int x = (gfx.width() - wrapped_lines[i].length() * font::FONT_WIDTH) / 2;
+        int x = 5; // 左侧固定5像素边距
         int y = start_y + (i * line_height);
-        RF_lcd.drawString(x, y, wrapped_lines[i].c_str(), BLACK);
+        // 确保不会超出显示区域
+        if (y + font::FONT_HEIGHT <= gfx.height() - 5) { // 底部保留5像素边距
+            RF_lcd.drawString(x, y, wrapped_lines[i].c_str(), BLACK);
+        }
     }
     RF_lcd.display();
     sleep_ms(20000); // 显示20秒

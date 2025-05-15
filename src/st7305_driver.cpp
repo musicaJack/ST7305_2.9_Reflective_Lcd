@@ -369,25 +369,13 @@ void ST7305Driver::drawChar(uint16_t x, uint16_t y, char c, bool color) {
     if (c < 32 || c > 126) {
         return;
     }
-    if (font_layout_ == FontLayout::Horizontal) {
-        // 横向点阵：每列一个字节
-        const uint8_t* char_data = font::ST7305_FONT + (c - 32) * font::FONT_WIDTH;
+    // 使用get_char_data API获取字符数据
+    const uint8_t* char_data = font::get_char_data(c);
+    for (uint8_t row = 0; row < font::FONT_HEIGHT; row++) {
+        uint8_t byte = char_data[row];
         for (uint8_t col = 0; col < font::FONT_WIDTH; col++) {
-            uint8_t byte = char_data[col];
-            for (uint8_t row = 0; row < font::FONT_HEIGHT; row++) {
-                bool pixel_is_set_in_font = (byte >> row) & 0x01;
-                drawPixel(x + col, y + row, (color == BLACK && pixel_is_set_in_font) ? BLACK : WHITE);
-            }
-        }
-    } else {
-        // 竖向点阵：每行一个字节
-        const uint8_t* char_data = font::ST7305_FONT + (c - 32) * font::FONT_HEIGHT;
-        for (uint8_t row = 0; row < font::FONT_HEIGHT; row++) {
-            uint8_t byte = char_data[row];
-            for (uint8_t col = 0; col < font::FONT_WIDTH; col++) {
-                bool pixel_is_set_in_font = (byte >> (7 - col)) & 0x01;
-                drawPixel(x + col, y + row, (color == BLACK && pixel_is_set_in_font) ? BLACK : WHITE);
-            }
+            bool pixel_is_set_in_font = (byte >> (7 - col)) & 0x01;
+            drawPixel(x + col, y + row, (color == BLACK && pixel_is_set_in_font) ? BLACK : WHITE);
         }
     }
 }
