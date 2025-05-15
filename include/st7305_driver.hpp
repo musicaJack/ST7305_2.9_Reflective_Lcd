@@ -7,6 +7,12 @@
 
 namespace st7305 {
 
+// 新增：字体点阵布局类型
+enum class FontLayout {
+    Horizontal, // 横向点阵：每列一个字节
+    Vertical   // 竖向点阵：每行一个字节
+};
+
 class ST7305Driver {
 public:
     // 颜色定义
@@ -59,6 +65,8 @@ public:
 
     uint8_t getCurrentFontWidth() const;
 
+    void setFontLayout(FontLayout layout);
+
 private:
     void writeCommand(uint8_t cmd);
     void writeData(uint8_t data);
@@ -76,6 +84,8 @@ private:
     bool lpm_mode_ = false;
 
     int rotation_ = 0; // 0:默认，1:90度，2:180度，3:270度
+
+    FontLayout font_layout_ = FontLayout::Vertical;
 
     // 私有辅助函数
     void setAddress();

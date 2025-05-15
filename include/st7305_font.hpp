@@ -1,9 +1,20 @@
 #pragma once
+
 #include <cstdint>
 
-// 字体宽度和高度（像素）
-#define ST7305_FONT_WIDTH 5
-#define ST7305_FONT_HEIGHT 7
+namespace font {
 
-// 标准ASCII 5x7点阵字库（范围：space~DEL）
-extern const unsigned char font[]; 
+// Font size constants
+constexpr int FONT_WIDTH = 8;
+constexpr int FONT_HEIGHT = 16;
+constexpr int FONT_SIZE = 4096;  // 16 * 256 characters
+
+// Font data declaration
+extern const uint8_t ST7305_FONT[FONT_SIZE];
+
+// Helper function to get character data
+inline const uint8_t* get_char_data(char c) {
+    return &ST7305_FONT[static_cast<unsigned char>(c) * FONT_HEIGHT];
+}
+
+} // namespace font

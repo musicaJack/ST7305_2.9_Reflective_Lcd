@@ -46,7 +46,8 @@ ST7305Driver::ST7305Driver(uint dc_pin, uint res_pin, uint cs_pin, uint sclk_pin
     cs_pin_(cs_pin),
     sclk_pin_(sclk_pin),
     sdin_pin_(sdin_pin),
-    display_buffer_(new uint8_t[DISPLAY_BUFFER_LENGTH])
+    display_buffer_(new uint8_t[DISPLAY_BUFFER_LENGTH]),
+    font_layout_(FontLayout::Vertical)
 {
     // 初始化GPIO
     gpio_init(dc_pin_);
@@ -360,16 +361,33 @@ void ST7305Driver::highPowerMode() {
     }
 }
 
+void ST7305Driver::setFontLayout(FontLayout layout) {
+    font_layout_ = layout;
+}
+
 void ST7305Driver::drawChar(uint16_t x, uint16_t y, char c, bool color) {
     if (c < 32 || c > 126) {
         return;
     }
-    const uint8_t* char_data = font + (c - 32) * ST7305_FONT_WIDTH;
-    for (uint8_t col = 0; col < ST7305_FONT_WIDTH; col++) {
-        uint8_t byte = char_data[col];
-        for (uint8_t row = 0; row < ST7305_FONT_HEIGHT; row++) {
-            bool pixel_is_set_in_font = (byte >> row) & 0x01;
-            drawPixel(x + col, y + row, (color == BLACK && pixel_is_set_in_font) ? BLACK : WHITE);
+    if (font_layout_ == FontLayout::Horizontal) {
+        // 横向点阵：每列一个字节
+        const uint8_t* char_data = font::ST7305_FONT + (c - 32) * font::FONT_WIDTH;
+        for (uint8_t col = 0; col < font::FONT_WIDTH; col++) {
+            uint8_t byte = char_data[col];
+            for (uint8_t row = 0; row < font::FONT_HEIGHT; row++) {
+                bool pixel_is_set_in_font = (byte >> row) & 0x01;
+                drawPixel(x + col, y + row, (color == BLACK && pixel_is_set_in_font) ? BLACK : WHITE);
+            }
+        }
+    } else {
+        // 竖向点阵：每行一个字节
+        const uint8_t* char_data = font::ST7305_FONT + (c - 32) * font::FONT_HEIGHT;
+        for (uint8_t row = 0; row < font::FONT_HEIGHT; row++) {
+            uint8_t byte = char_data[row];
+            for (uint8_t col = 0; col < font::FONT_WIDTH; col++) {
+                bool pixel_is_set_in_font = (byte >> (7 - col)) & 0x01;
+                drawPixel(x + col, y + row, (color == BLACK && pixel_is_set_in_font) ? BLACK : WHITE);
+            }
         }
     }
 }
@@ -382,23 +400,23 @@ void ST7305Driver::drawString(uint16_t x, uint16_t y, std::string_view str, bool
         switch (rotation_) {
             case 0: // 正常横排
                 drawChar(x, y, c, color);
-                x += ST7305_FONT_WIDTH;
+                x += font::FONT_WIDTH;
                 break;
             case 1: // 90度，竖排，字头朝上
                 drawChar(x, y, c, color);
-                y += ST7305_FONT_WIDTH;
+                y += font::FONT_WIDTH;
                 break;
             case 2: // 180度，横排反向
                 drawChar(x, y, c, color);
-                x -= ST7305_FONT_WIDTH;
+                x -= font::FONT_WIDTH;
                 break;
             case 3: // 270度，竖排反向
                 drawChar(x, y, c, color);
-                y -= ST7305_FONT_WIDTH;
+                y -= font::FONT_WIDTH;
                 break;
             default:
                 drawChar(x, y, c, color);
-                x += ST7305_FONT_WIDTH;
+                x += font::FONT_WIDTH;
                 break;
         }
     }
@@ -408,7 +426,7 @@ uint16_t ST7305Driver::getStringWidth(std::string_view str) const {
     uint16_t width = 0;
     for (char c : str) {
         if (c >= 32 && c <= 126) {
-            width += ST7305_FONT_WIDTH;
+            width += font::FONT_WIDTH;
         }
     }
     return width;
@@ -476,7 +494,7 @@ void ST7305Driver::plotPixelRaw(uint16_t x, uint16_t y, bool color) {
 }
 
 uint8_t ST7305Driver::getCurrentFontWidth() const {
-    return ST7305_FONT_WIDTH;
+    return font::FONT_WIDTH;
 }
 
 } // namespace st7305 
