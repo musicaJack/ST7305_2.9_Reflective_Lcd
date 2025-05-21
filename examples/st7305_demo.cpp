@@ -2,7 +2,7 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pico_display_gfx.hpp"
-#include "st7305_font.hpp"
+#include "st73xx_font.hpp"
 #include "gfx_colors.hpp"
 #include <cstdio>
 #include <vector>
@@ -75,7 +75,7 @@ std::vector<std::string> wrapText(const char* text, int max_chars) {
 }
 
 // 用圆弧和直线组合的水滴状叶片，并填充内部为黑色
-void drawFanBlade(pico_gfx::PicoDisplayGFX& gfx, int cx, int cy, float angle, int length, int width, uint16_t color) {
+void drawFanBlade(pico_gfx::PicoDisplayGFX<st7305::ST7305Driver>& gfx, int cx, int cy, float angle, int length, int width, uint16_t color) {
     float root_radius = width * 0.6f; // 根部圆弧半径
     float tip_radius = width * 1.2f;  // 外缘圆弧半径
     float blade_span = M_PI / 2.2;    // 叶片张开角度
@@ -143,7 +143,7 @@ int main() {
     stdio_init_all();
 
     st7305::ST7305Driver RF_lcd(PIN_DC, PIN_RST, PIN_CS, PIN_SCLK, PIN_SDIN);
-    pico_gfx::PicoDisplayGFX gfx(RF_lcd, st7305::ST7305Driver::LCD_WIDTH, st7305::ST7305Driver::LCD_HEIGHT);
+    pico_gfx::PicoDisplayGFX<st7305::ST7305Driver> gfx(RF_lcd, st7305::ST7305Driver::LCD_WIDTH, st7305::ST7305Driver::LCD_HEIGHT);
 
     printf("Initializing ST7305 display...\n");
     RF_lcd.initialize();

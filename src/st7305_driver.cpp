@@ -3,7 +3,7 @@
 #include "hardware/spi.h"
 #include "hardware/gpio.h"
 #include "pico/stdlib.h"
-#include "st7305_font.hpp"
+#include "st73xx_font.hpp"
 #include "gfx_colors.hpp"
 
 namespace st7305 {
