@@ -24,6 +24,30 @@ void PicoDisplayGFX<Driver>::writePoint(uint x, uint y, uint16_t color) {
     driver_.plotPixelRaw(x, y, (color != 0));
 }
 
+template<typename Driver>
+void PicoDisplayGFX<Driver>::drawPixelGray(int16_t x, int16_t y, uint8_t gray) {
+    if ((x >= 0) && (x < WIDTH) && (y >= 0) && (y < HEIGHT)) {
+        int16_t tx = x, ty = y;
+        switch (rotation_) {
+        case 1:
+            tx = y;
+            ty = _width - 1 - x;
+            break;
+        case 2:
+            tx = _width - 1 - x;
+            ty = _height - 1 - y;
+            break;
+        case 3:
+            tx = _height - 1 - y;
+            ty = x;
+            break;
+        }
+        // 确保灰度值在0-3范围内
+        uint8_t level = gray & 0x03;
+        driver_.plotPixelGrayRaw(static_cast<uint>(tx), static_cast<uint>(ty), level);
+    }
+}
+
 } // namespace pico_gfx
 
 #endif // PICO_DISPLAY_GFX_INL 

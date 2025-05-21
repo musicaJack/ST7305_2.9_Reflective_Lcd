@@ -18,6 +18,8 @@ public:
     // 颜色定义
     static constexpr uint8_t COLOR_WHITE = 0x00;
     static constexpr uint8_t COLOR_BLACK = 0x03;
+    static constexpr uint8_t COLOR_GRAY1 = 0x01;
+    static constexpr uint8_t COLOR_GRAY2 = 0x02;
 
     // 显示参数
     static constexpr uint16_t LCD_WIDTH = 300;
@@ -37,11 +39,13 @@ public:
 
     // 绘图函数
     void drawPixel(uint16_t x, uint16_t y, bool color);
+    void drawPixelGray(uint16_t x, uint16_t y, uint8_t gray_level);
     void fill(uint8_t data);
 
     // 文本显示函数
     void drawChar(uint16_t x, uint16_t y, char c, bool color);
     void drawString(uint16_t x, uint16_t y, std::string_view str, bool color);
+    void drawString(uint16_t x, uint16_t y, const char* str, bool color);
     uint16_t getStringWidth(std::string_view str) const;
 
     // 显示控制
@@ -62,6 +66,7 @@ public:
     void High_Power_Mode();
 
     void plotPixelRaw(uint16_t x, uint16_t y, bool color);
+    void plotPixelGrayRaw(uint16_t x, uint16_t y, uint8_t gray_level);
 
     uint8_t getCurrentFontWidth() const;
 
@@ -72,6 +77,7 @@ private:
     void writeData(uint8_t data);
     void writeData(const uint8_t* data, size_t len);
     void writePoint(uint16_t x, uint16_t y, bool enabled);
+    void writePointGray(uint16_t x, uint16_t y, uint8_t color);
 
     const uint dc_pin_;
     const uint res_pin_;

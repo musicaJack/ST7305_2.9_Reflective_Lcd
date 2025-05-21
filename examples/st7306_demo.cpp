@@ -152,51 +152,28 @@ int main() {
     const int rotation = 0;
     gfx.setRotation(rotation);
     RF_lcd.setRotation(rotation);
-
-    // 演示1：显示诗歌
-    printf("Displaying poem...\n");
+   
+      
+    // 简单灰度条纹测试，只测试一小部分
+    printf("Testing grayscale...\n");
     RF_lcd.clearDisplay();
     
-    // 计算每行最多能显示多少字符
-    int max_chars_per_line = (gfx.width() - 10) / font::FONT_WIDTH; // 减去左右各5像素的边距
-    std::vector<std::string> wrapped_lines;
-    for (int i = 0; i < NUM_LINES; i++) {
-        std::vector<std::string> temp = wrapText(lines[i], max_chars_per_line);
-        wrapped_lines.insert(wrapped_lines.end(), temp.begin(), temp.end());
-    }
-    int total_lines = wrapped_lines.size();
-    int line_height = font::FONT_HEIGHT + 2;
-    
-    // 计算总显示高度
-    int total_display_height = total_lines * line_height;
-    // 计算起始Y坐标，确保有足够的空间显示所有文字
-    int start_y = 5; // 从顶部5像素开始
-    
-    // 左对齐显示每一行
-    for (int i = 0; i < total_lines; i++) {
-        int x = 5; // 左侧固定5像素边距
-        int y = start_y + (i * line_height);
-        // 确保不会超出显示区域
-        if (y + font::FONT_HEIGHT <= gfx.height() - 5) { // 底部保留5像素边距
-            RF_lcd.drawString(x, y, wrapped_lines[i].c_str(), BLACK);
+    // 绘制4个不同灰度的方块
+    for (int i = 0; i < 4; i++) {
+        uint8_t gray_level = i; // 0, 1, 2, 3
+        for (int y = 100; y < 150; y++) {
+            for (int x = i*50; x < (i+1)*50; x++) {
+                if (x < RF_lcd.LCD_WIDTH && y < RF_lcd.LCD_HEIGHT) {
+                    RF_lcd.drawPixelGray(x, y, gray_level);
+                }
+            }
         }
     }
+    
     RF_lcd.display();
-    sleep_ms(5000); // 显示5秒
-
-    // 演示2：显示棋盘
-    printf("Displaying checkerboard pattern...\n");
-    RF_lcd.clearDisplay();
-    for (uint16_t y = 0; y < st7306::ST7306Driver::LCD_HEIGHT; y++) {
-        for (uint16_t x = 0; x < st7306::ST7306Driver::LCD_WIDTH; x++) {
-            bool color = ((x / 8) + (y / 8)) % 2 == 0;
-            RF_lcd.drawPixel(x, y, color);
-        }
-    }
-    RF_lcd.display();
-    sleep_ms(2000); // 显示2秒
-
-    // 演示3：动态风车
+    sleep_ms(3000);
+    
+    // 演示：动态风车
     printf("Displaying windmill animation...\n");
     RF_lcd.clearDisplay();
     
@@ -206,45 +183,41 @@ int main() {
     
     // 动画循环
     float current_angle = 0.0f;
-    for (int frame = 0; frame < windmill_config::TOTAL_FRAMES; frame++) {
+    for (int frame = 0; frame < windmill_config::TOTAL_FRAMES / 5; frame++) { // 减少帧数以缩短演示时间
         RF_lcd.clearDisplay();
         // 匀速加速
-        float rpm = windmill_config::MAX_RPM * (float)frame / windmill_config::TOTAL_FRAMES;
+        float rpm = windmill_config::MAX_RPM * (float)frame / (windmill_config::TOTAL_FRAMES / 5);
         if (rpm < 0) rpm = 0;
         int current_delay = (rpm > 0) ? static_cast<int>(60000.0f / (rpm * windmill_config::NUM_BLADES)) : 20;
         // 显示转速信息
         char rpm_text[32];
         char frame_text[32];
         snprintf(rpm_text, sizeof(rpm_text), "RPM: %.1f/%.1f", rpm, windmill_config::MAX_RPM);
-        snprintf(frame_text, sizeof(frame_text), "Frame: %d/%d", frame + 1, windmill_config::TOTAL_FRAMES);
-        RF_lcd.drawString(5, 5, rpm_text, BLACK);
-        RF_lcd.drawString(5, 5 + font::FONT_HEIGHT + 2, frame_text, BLACK);
+        snprintf(frame_text, sizeof(frame_text), "Frame: %d/%d", frame + 1, windmill_config::TOTAL_FRAMES / 5);
+        RF_lcd.drawString(5, 5, rpm_text, true);
+        RF_lcd.drawString(5, 5 + font::FONT_HEIGHT + 2, frame_text, true);
         // 计算本帧角度增量
         float delta_angle = rpm * 360.0f * (1.0f / windmill_config::FPS) / 60.0f;
         current_angle += delta_angle;
         // 绘制风车
-        gfx.drawFilledCircle(center_x, center_y, windmill_config::HUB_RADIUS, BLACK);
+        gfx.drawFilledCircle(center_x, center_y, windmill_config::HUB_RADIUS, true);
         for (int i = 0; i < windmill_config::NUM_BLADES; i++) {
             float angle = (current_angle + i * (360.0f / windmill_config::NUM_BLADES)) * M_PI / 180.0f;
-            drawFanBlade(gfx, center_x, center_y, angle, windmill_config::BLADE_LENGTH, windmill_config::BLADE_WIDTH, BLACK);
+            drawFanBlade(gfx, center_x, center_y, angle, windmill_config::BLADE_LENGTH, windmill_config::BLADE_WIDTH, true);
         }
         RF_lcd.display();
         sleep_ms(current_delay);
     }
     
     sleep_ms(1000);  // 暂停1秒
-
-    // 结束演示
-    printf("Demo end.\n");
-    RF_lcd.clearDisplay();
     
-    // 显示结束信息
-    const char* end_text = "DEMO END.";
-    int end_text_len = strlen(end_text);
-    int end_x = (gfx.width() - end_text_len * font::FONT_WIDTH) / 2;
-    int end_y = (gfx.height() - font::FONT_HEIGHT) / 2;
-    RF_lcd.drawString(end_x, end_y, end_text, BLACK);
+    // 结束测试
+    printf("Finishing tests...\n");
+    RF_lcd.clearDisplay();
+    RF_lcd.drawString((RF_lcd.LCD_WIDTH - 9*8)/2, RF_lcd.LCD_HEIGHT/2 - 4, "DEMO END", true);
     RF_lcd.display();
-    sleep_ms(2000);
+    sleep_ms(3000);
+    printf("Demo complete\n");
+    
     return 0;
 } 
