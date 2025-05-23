@@ -45,35 +45,6 @@ namespace windmill_config {
     constexpr int TOTAL_ROTATIONS = 3;     // 总旋转圈数
 }
 
-// 文字内容
-const char* lines[] = {
-    "Satellites whisper, Pixels dance.",
-    "Pico brings them both to life.",
-    "Tiny circuits hum a cosmic tune,",
-    "while LEDs paint the void in bloom.",
-    "A microcontroller's quiet might,",
-    "turns stardust into blinking light.",
-    "Through silicon veins, electrons race,",
-    "crafting dreams in this small space.",
-    "The universe fits in RAM's embrace,",
-    "as Pico charts its stellar chase."
-};
-
-const int NUM_LINES = sizeof(lines) / sizeof(lines[0]);
-
-// 自动分割字符串为多行，保证每行不超过max_chars个字符
-std::vector<std::string> wrapText(const char* text, int max_chars) {
-    std::vector<std::string> lines;
-    std::string str(text);
-    size_t start = 0;
-    while (start < str.length()) {
-        size_t len = std::min((size_t)max_chars, str.length() - start);
-        lines.push_back(str.substr(start, len));
-        start += len;
-    }
-    return lines;
-}
-
 // 用圆弧和直线组合的水滴状叶片，并填充内部为黑色
 void drawFanBlade(pico_gfx::PicoDisplayGFX<st7306::ST7306Driver>& gfx, int cx, int cy, float angle, int length, int width, uint16_t color) {
     float root_radius = width * 0.6f; // 根部圆弧半径
@@ -158,20 +129,108 @@ int main() {
     printf("Testing grayscale...\n");
     RF_lcd.clearDisplay();
     
-    // 绘制4个不同灰度的方块
-    for (int i = 0; i < 4; i++) {
-        uint8_t gray_level = i; // 0, 1, 2, 3
-        for (int y = 100; y < 150; y++) {
-            for (int x = i*50; x < (i+1)*50; x++) {
-                if (x < RF_lcd.LCD_WIDTH && y < RF_lcd.LCD_HEIGHT) {
-                    RF_lcd.drawPixelGray(x, y, gray_level);
-                }
-            }
-        }
+    // Windows 95风格进度条
+    const int bar_width = RF_lcd.LCD_WIDTH * 0.7;  // 进度条总宽度
+    const int bar_height = 20;                     // 进度条高度
+    const int bar_x = (RF_lcd.LCD_WIDTH - bar_width) / 2;  // 居中显示
+    const int bar_y = (RF_lcd.LCD_HEIGHT * 0.7);           // 位于屏幕下方
+    const int steps = 100;                         // 进度步骤数
+    const int pattern_width = 64;                  // 条纹渐变周期总宽度
+    int offset = 0;                                // 动画偏移量
+    
+    // 显示标题文本
+    RF_lcd.drawString((RF_lcd.LCD_WIDTH - 19*8)/2, RF_lcd.LCD_HEIGHT/3, "System Starting Up...", true);
+    
+    // 手动绘制外框 (使用drawPixelGray替代drawRect)
+    for (int x = bar_x; x < bar_x + bar_width; x++) {
+        // 绘制顶部和底部边框
+        RF_lcd.drawPixelGray(x, bar_y, 3);
+        RF_lcd.drawPixelGray(x, bar_y + bar_height - 1, 3);
+    }
+    for (int y = bar_y; y < bar_y + bar_height; y++) {
+        // 绘制左侧和右侧边框
+        RF_lcd.drawPixelGray(bar_x, y, 3);
+        RF_lcd.drawPixelGray(bar_x + bar_width - 1, y, 3);
     }
     
     RF_lcd.display();
-    sleep_ms(3000);
+    sleep_ms(500);  // 显示空进度条一段时间
+    
+    // 进度条动画 - 从左到右填充，内部条纹滚动
+    for (int step = 0; step <= steps; step++) {
+        // 更新动画偏移量（逐渐向左移动）
+        offset = (offset + 2) % pattern_width;
+        
+        // 计算当前填充宽度
+        int fill_width = (step * (bar_width - 6)) / steps;
+        
+        // 先清除整个进度条内部区域
+        for (int y = bar_y + 3; y < bar_y + bar_height - 3; y++) {
+            for (int x = bar_x + 3; x < bar_x + bar_width - 3; x++) {
+                RF_lcd.drawPixelGray(x, y, 0); // 背景用黑色
+            }
+        }
+        
+        // 绘制已完成的进度部分（带有滚动灰度条纹，使用抖动技术）
+        for (int y = bar_y + 3; y < bar_y + bar_height - 3; y++) {
+            for (int x = bar_x + 3; x < bar_x + 3 + fill_width; x++) {
+                // 使用余弦函数生成更平滑的渐变
+                float position = (float)((x + offset) % pattern_width) / pattern_width;
+                // 生成一个0到1的平滑波浪值
+                float wave = (1.0f + cosf(position * 2.0f * M_PI)) / 2.0f;
+                
+                // 获取主灰度级别 (0-3)
+                uint8_t base_level = (uint8_t)(wave * 3.0f);
+                
+                // 获取误差，用于抖动
+                float error = (wave * 3.0f) - base_level;
+                
+                // 应用抖动模式 - 使用2x2的Bayer矩阵
+                int bayer_x = x % 2;
+                int bayer_y = y % 2;
+                int bayer_index = bayer_y * 2 + bayer_x;
+                
+                // 阈值矩阵
+                const float bayer_threshold[4] = {
+                    0.0f,  0.5f,
+                    0.75f, 0.25f
+                };
+                
+                // 根据抖动阈值决定是否提升灰度级别
+                uint8_t gray_level = base_level;
+                if (error > bayer_threshold[bayer_index] && base_level < 3) {
+                    gray_level = base_level + 1;
+                }
+                
+                RF_lcd.drawPixelGray(x, y, gray_level);
+            }
+        }
+        
+        // 显示百分比
+        char progress_text[16];
+        snprintf(progress_text, sizeof(progress_text), "%d%%", step);
+        
+        // 清除旧文字区域
+        for (int y = bar_y; y < bar_y + 20; y++) {
+            for (int x = bar_x + bar_width + 5; x < bar_x + bar_width + 45; x++) {
+                RF_lcd.drawPixelGray(x, y, 0); // 用黑色清除
+            }
+        }
+        
+        RF_lcd.drawString(bar_x + bar_width + 5, bar_y, progress_text, true);
+        
+        RF_lcd.display();
+        sleep_ms(50);  // 控制进度速度
+    }
+    
+    // 进度到100%后暂停1秒
+    sleep_ms(1000);
+    
+    // 显示完成信息
+    RF_lcd.clearDisplay();
+    RF_lcd.drawString((RF_lcd.LCD_WIDTH - 14*8)/2, RF_lcd.LCD_HEIGHT/2 - 4, "Loading Complete", true);
+    RF_lcd.display();
+    sleep_ms(2000);
     
     // 演示：动态风车
     printf("Displaying windmill animation...\n");
