@@ -31,8 +31,8 @@ ST7306Driver::ST7306Driver(uint dc_pin, uint res_pin, uint cs_pin, uint sclk_pin
     gpio_set_dir(sclk_pin_, GPIO_OUT);
     gpio_set_dir(sdin_pin_, GPIO_OUT);
 
-    // 初始化SPI - 降低速率从40MHz到20MHz
-    spi_init(spi0, 20000000); // 20MHz
+    // 初始化SPI - 速率40MHz
+    spi_init(spi0, 40000000); // 40MHz
     spi_set_format(spi0, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     gpio_set_function(sclk_pin_, GPIO_FUNC_SPI);
     gpio_set_function(sdin_pin_, GPIO_FUNC_SPI);
@@ -58,8 +58,8 @@ void ST7306Driver::initialize() {
     gpio_put(res_pin_, 1);
     sleep_ms(10);
 
-    // 初始化SPI - 降低速率到10MHz，稳定性更好
-    spi_init(spi0, 10000000); // 10MHz
+    // 初始化SPI
+    spi_init(spi0, 40000000); // 40MHz
     spi_set_format(spi0, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     gpio_set_function(sclk_pin_, GPIO_FUNC_SPI);
     gpio_set_function(sdin_pin_, GPIO_FUNC_SPI);
@@ -244,7 +244,7 @@ void ST7306Driver::display() {
     for (size_t offset = 0; offset < DISPLAY_BUFFER_LENGTH; offset += BLOCK_SIZE) {
         size_t chunk_size = std::min(BLOCK_SIZE, (int)(DISPLAY_BUFFER_LENGTH - offset));
         spi_write_blocking(spi0, display_buffer_ + offset, chunk_size);
-        sleep_ms(1); // 添加短暂延时，提高稳定性
+        // sleep_ms(1); // 添加短暂延时，提高稳定性  <--- 注释掉这一行
     }
     
     gpio_put(cs_pin_, 1); // 片选禁用

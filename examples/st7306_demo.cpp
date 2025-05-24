@@ -24,14 +24,14 @@ namespace windmill_config {
     constexpr int NUM_BLADES = 3;         // 叶片数量
     
     // 时间配置（单位：秒）
-    constexpr int TOTAL_DURATION = 30;    // 总演示时长（秒）
+    constexpr int TOTAL_DURATION = 60;    // 总演示时长（秒）
     constexpr int FPS = 30;              // 每秒帧数
     constexpr int TOTAL_FRAMES = TOTAL_DURATION * FPS; // 总帧数
     constexpr int ACCEL_FRAMES = TOTAL_FRAMES / 2;     // 加速阶段帧数
     constexpr int DECEL_FRAMES = TOTAL_FRAMES / 2;     // 减速阶段帧数
     
     // 转速配置
-    constexpr float MAX_RPM = 6000.0f;     // 最高转速（转/分钟）
+    constexpr float MAX_RPM = 2000.0f;     // 最高转速（转/分钟）
     constexpr float MIN_RPM = 1000.0f;      // 最低转速（转/分钟）
     
     // 速度配置（单位：毫秒）
